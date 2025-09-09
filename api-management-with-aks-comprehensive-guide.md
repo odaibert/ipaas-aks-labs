@@ -347,6 +347,9 @@ Write-Host "✅ Using AKS Store IP: $env:STORE_IP"
 $APIM_URL = az apim show --name "apim-$env:RAND" --resource-group $env:RG_NAME --query "gatewayUrl" --output tsv
 
 # Create OpenAPI specification for the AKS Store APIs
+# Use direct variable substitution to avoid expansion issues
+$storeUrl = "http://$env:STORE_IP"
+
 @"
 {
   "openapi": "3.0.0",
@@ -357,7 +360,7 @@ $APIM_URL = az apim show --name "apim-$env:RAND" --resource-group $env:RG_NAME -
   },
   "servers": [
     {
-      "url": "http://$env:STORE_IP",
+      "url": "$storeUrl",
       "description": "AKS Store API running on Azure Kubernetes Service"
     }
   ],
@@ -376,18 +379,10 @@ $APIM_URL = az apim show --name "apim-$env:RAND" --resource-group $env:RG_NAME -
                   "items": {
                     "type": "object",
                     "properties": {
-                      "id": {
-                        "type": "integer"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "price": {
-                        "type": "number"
-                      },
-                      "image": {
-                        "type": "string"
-                      }
+                      "id": { "type": "integer" },
+                      "name": { "type": "string" },
+                      "price": { "type": "number" },
+                      "image": { "type": "string" }
                     }
                   }
                 }
@@ -406,18 +401,12 @@ $APIM_URL = az apim show --name "apim-$env:RAND" --resource-group $env:RG_NAME -
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": {
-              "type": "integer"
-            }
+            "schema": { "type": "integer" }
           }
         ],
         "responses": {
-          "200": {
-            "description": "Product details"
-          },
-          "404": {
-            "description": "Product not found"
-          }
+          "200": { "description": "Product details" },
+          "404": { "description": "Product not found" }
         }
       }
     },
@@ -426,9 +415,7 @@ $APIM_URL = az apim show --name "apim-$env:RAND" --resource-group $env:RG_NAME -
         "summary": "Get all orders",
         "description": "Retrieve a list of all orders",
         "responses": {
-          "200": {
-            "description": "List of orders"
-          }
+          "200": { "description": "List of orders" }
         }
       },
       "post": {
@@ -441,24 +428,16 @@ $APIM_URL = az apim show --name "apim-$env:RAND" --resource-group $env:RG_NAME -
               "schema": {
                 "type": "object",
                 "properties": {
-                  "productId": {
-                    "type": "integer"
-                  },
-                  "quantity": {
-                    "type": "integer"
-                  },
-                  "customerEmail": {
-                    "type": "string"
-                  }
+                  "productId": { "type": "integer" },
+                  "quantity": { "type": "integer" },
+                  "customerEmail": { "type": "string" }
                 }
               }
             }
           }
         },
         "responses": {
-          "201": {
-            "description": "Order created"
-          }
+          "201": { "description": "Order created" }
         }
       }
     }
@@ -466,7 +445,18 @@ $APIM_URL = az apim show --name "apim-$env:RAND" --resource-group $env:RG_NAME -
 }
 "@ | Out-File -FilePath "aks-store-api-spec.json" -Encoding utf8
 
-Write-Host "✅ OpenAPI specification created with server URL: http://$env:STORE_IP"
+Write-Host "✅ OpenAPI specification created with server URL: $storeUrl"
+
+# Validate the JSON file
+try {
+    $jsonValidation = Get-Content "aks-store-api-spec.json" -Raw | ConvertFrom-Json
+    Write-Host "✅ JSON file is valid and ready for import"
+    Write-Host "   Server URL in file: $($jsonValidation.servers[0].url)"
+} catch {
+    Write-Host "❌ JSON validation failed: $($_.Exception.Message)"
+    Write-Host "   Please check the file content and try again"
+    exit 1
+}
 
 # Import API into APIM
 Write-Host "📥 Importing AKS Store API into API Management..."
