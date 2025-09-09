@@ -315,20 +315,34 @@ kubectl get all -n aks-store-demo
 
 Write-Host ""
 Write-Host "📱 Application Access:"
-Write-Host "   Store Front Web App: http://$env:API_EXTERNAL_IP"
-Write-Host "   Products API: http://$env:API_EXTERNAL_IP/products"
-Write-Host "   Orders API: http://$env:API_EXTERNAL_IP/orders"
+Write-Host "   Store Front Web App: http://$env:STORE_IP"
+Write-Host "   Products API: http://$env:STORE_IP/products"
+Write-Host "   Orders API: http://$env:STORE_IP/orders"
 Write-Host ""
 Write-Host "✅ AKS Store Demo is ready for API Management integration!"
 ```
 
-## Configure Azure API Management
+## 🔗 Step 6: Configure Azure API Management
 
 ### Import API into APIM
 
 Now let's expose our AKS Store APIs through Azure API Management:
 
 ```powershell
+# Ensure STORE_IP is set
+if ([string]::IsNullOrEmpty($env:STORE_IP)) {
+    Write-Host "⚠️ STORE_IP not set. Getting external IP..."
+    $env:STORE_IP = kubectl get service store-front -n aks-store-demo -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+    
+    if ([string]::IsNullOrEmpty($env:STORE_IP)) {
+        Write-Host "❌ External IP not yet available. Please wait for LoadBalancer to assign IP and run:"
+        Write-Host "   `$env:STORE_IP = kubectl get service store-front -n aks-store-demo -o jsonpath='{.status.loadBalancer.ingress[0].ip}'"
+        exit 1
+    }
+}
+
+Write-Host "✅ Using AKS Store IP: $env:STORE_IP"
+
 # Get APIM service URL
 $APIM_URL = az apim show --name "apim-$env:RAND" --resource-group $env:RG_NAME --query "gatewayUrl" --output tsv
 
@@ -343,7 +357,8 @@ $APIM_URL = az apim show --name "apim-$env:RAND" --resource-group $env:RG_NAME -
   },
   "servers": [
     {
-      "url": "http://$env:API_EXTERNAL_IP"
+      "url": "http://$env:STORE_IP",
+      "description": "AKS Store API running on Azure Kubernetes Service"
     }
   ],
   "paths": {
@@ -451,7 +466,10 @@ $APIM_URL = az apim show --name "apim-$env:RAND" --resource-group $env:RG_NAME -
 }
 "@ | Out-File -FilePath "aks-store-api-spec.json" -Encoding utf8
 
+Write-Host "✅ OpenAPI specification created with server URL: http://$env:STORE_IP"
+
 # Import API into APIM
+Write-Host "📥 Importing AKS Store API into API Management..."
 az apim api import `
   --resource-group $env:RG_NAME `
   --service-name "apim-$env:RAND" `
@@ -461,7 +479,12 @@ az apim api import `
   --specification-path "aks-store-api-spec.json" `
   --display-name "AKS Store API"
 
-Write-Host "✅ AKS Store API imported into API Management"
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "✅ AKS Store API successfully imported into API Management"
+} else {
+    Write-Host "❌ Failed to import API. Please check the OpenAPI specification file."
+    Write-Host "   You can validate the file content by running: Get-Content aks-store-api-spec.json"
+}
 ```
 
 ### Configure API Policies
