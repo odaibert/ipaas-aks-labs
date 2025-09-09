@@ -326,7 +326,10 @@ Write-Host "✅ AKS Store Demo is ready for API Management integration!"
 
 ### Import API into APIM
 
-Now let's expose our AKS Store APIs through Azure API Management:
+Now let's expose our AKS Store APIs through Azure API Management.
+
+> **📋 Important Note**  
+> This step will automatically generate an OpenAPI specification file (`aks-store-api-spec.json`) that contains your environment-specific IP addresses. This file is not tracked in git to ensure it always reflects your current deployment.
 
 ```powershell
 # Ensure STORE_IP is set
@@ -347,10 +350,11 @@ Write-Host "✅ Using AKS Store IP: $env:STORE_IP"
 $APIM_URL = az apim show --name "apim-$env:RAND" --resource-group $env:RG_NAME --query "gatewayUrl" --output tsv
 
 # Create OpenAPI specification for the AKS Store APIs
-# Use direct variable substitution to avoid expansion issues
-$storeUrl = "http://$env:STORE_IP"
+# Method: Create JSON content with proper variable substitution
+Write-Host "📝 Creating OpenAPI specification..."
 
-@"
+$storeUrl = "http://$env:STORE_IP"
+$jsonContent = @"
 {
   "openapi": "3.0.0",
   "info": {
@@ -443,7 +447,10 @@ $storeUrl = "http://$env:STORE_IP"
     }
   }
 }
-"@ | Out-File -FilePath "aks-store-api-spec.json" -Encoding utf8
+"@
+
+# Save the JSON content to file
+$jsonContent | Out-File -FilePath "aks-store-api-spec.json" -Encoding utf8
 
 Write-Host "✅ OpenAPI specification created with server URL: $storeUrl"
 
@@ -452,11 +459,16 @@ try {
     $jsonValidation = Get-Content "aks-store-api-spec.json" -Raw | ConvertFrom-Json
     Write-Host "✅ JSON file is valid and ready for import"
     Write-Host "   Server URL in file: $($jsonValidation.servers[0].url)"
+    Write-Host "   File created: aks-store-api-spec.json"
 } catch {
     Write-Host "❌ JSON validation failed: $($_.Exception.Message)"
     Write-Host "   Please check the file content and try again"
     exit 1
 }
+
+Write-Host ""
+Write-Host "ℹ️  Note: The JSON specification file is auto-generated and not tracked in git"
+Write-Host "   This ensures the file always contains your current environment's IP addresses"
 
 # Import API into APIM
 Write-Host "📥 Importing AKS Store API into API Management..."

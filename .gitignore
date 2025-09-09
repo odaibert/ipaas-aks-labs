@@ -48,6 +48,12 @@ typings/
 .rpt2_cache/
 .rts2_cache_cjs/
 .rts2_cache_es/
+
+# Workshop generated files - these are created automatically by the scripts
+*.json
+*.xml
+*.yaml
+*.yml
 .rts2_cache_umd/
 
 # Optional REPL history
