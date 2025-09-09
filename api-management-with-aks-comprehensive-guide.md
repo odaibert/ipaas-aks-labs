@@ -214,21 +214,38 @@ kubectl get ingress -n aks-store-demo
 
 #### Step 4: Get Application External IP
 
-Wait for the ingress to get an external IP address:
+Expose the store-front service and wait for external IP assignment:
 
 ```powershell
+# Expose the store-front service as LoadBalancer to get an external IP
+Write-Host "🔗 Exposing store-front service with LoadBalancer..."
+kubectl patch service store-front -n aks-store-demo -p '{"spec":{"type":"LoadBalancer"}}'
+
 # Wait for external IP assignment
 Write-Host "⏳ Waiting for external IP assignment..."
+$timeout = 300  # 5 minutes timeout
+$elapsed = 0
 do {
-    $EXTERNAL_IP = kubectl get ingress store-front -n aks-store-demo -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+    $EXTERNAL_IP = kubectl get service store-front -n aks-store-demo -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
     if ([string]::IsNullOrEmpty($EXTERNAL_IP)) {
-        Write-Host "   Still waiting for IP assignment..."
+        Write-Host "   Still waiting for IP assignment... ($elapsed seconds elapsed)"
         Start-Sleep -Seconds 15
+        $elapsed += 15
+        if ($elapsed -ge $timeout) {
+            Write-Host "   ⚠️ Timeout reached. This may take up to 10-15 minutes in some regions."
+            Write-Host "   ℹ️ You can continue and check later with: kubectl get service store-front -n aks-store-demo"
+            break
+        }
     }
 } while ([string]::IsNullOrEmpty($EXTERNAL_IP))
 
-Write-Host "✅ External IP assigned: $EXTERNAL_IP"
-$env:API_EXTERNAL_IP = $EXTERNAL_IP
+if (-not [string]::IsNullOrEmpty($EXTERNAL_IP)) {
+    Write-Host "✅ External IP assigned: $EXTERNAL_IP"
+    $env:STORE_IP = $EXTERNAL_IP
+} else {
+    Write-Host "⏸️ External IP assignment in progress. Please run this command later:"
+    Write-Host "   `$env:STORE_IP = kubectl get service store-front -n aks-store-demo -o jsonpath='{.status.loadBalancer.ingress[0].ip}'"
+}
 ```
 
 #### Step 5: Test the Application
@@ -236,33 +253,45 @@ $env:API_EXTERNAL_IP = $EXTERNAL_IP
 Test the application and its API endpoints:
 
 ```powershell
+```powershell
 # Test the store front application
 Write-Host "🧪 Testing the AKS Store application..."
 
-# Test the main store front
-try {
-    Write-Host "   Testing store front web app..."
-    $response = Invoke-WebRequest -Uri "http://$env:API_EXTERNAL_IP" -UseBasicParsing -TimeoutSec 10
-    Write-Host "   ✅ Store front is accessible (Status: $($response.StatusCode))"
-} catch {
-    Write-Host "   ⚠️ Store front not yet ready: $($_.Exception.Message)"
+# Check if we have the external IP
+if ([string]::IsNullOrEmpty($env:STORE_IP)) {
+    Write-Host "⚠️ External IP not yet available. Getting current status..."
+    $env:STORE_IP = kubectl get service store-front -n aks-store-demo -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
 }
 
-# Test the product service API
-try {
-    Write-Host "   Testing product service API..."
-    $productResponse = Invoke-RestMethod -Uri "http://$env:API_EXTERNAL_IP/products" -TimeoutSec 10
-    Write-Host "   ✅ Product API is working - Found $($productResponse.Count) products"
-} catch {
-    Write-Host "   ⚠️ Product API not yet ready: $($_.Exception.Message)"
-}
+if (-not [string]::IsNullOrEmpty($env:STORE_IP)) {
+    # Test the main store front
+    try {
+        Write-Host "   Testing store front web app..."
+        $response = Invoke-WebRequest -Uri "http://$env:STORE_IP" -UseBasicParsing -TimeoutSec 10
+        Write-Host "   ✅ Store front is accessible (Status: $($response.StatusCode))"
+    } catch {
+        Write-Host "   ⚠️ Store front not yet ready: $($_.Exception.Message)"
+    }
 
-Write-Host ""
-Write-Host "🎯 Available API Endpoints for APIM Integration:"
-Write-Host "   GET  /products        - Get all products"
-Write-Host "   GET  /products/{id}   - Get specific product"
-Write-Host "   POST /orders          - Create new order"
-Write-Host "   GET  /orders          - Get all orders"
+    # Test the product service API
+    try {
+        Write-Host "   Testing product service API..."
+        $productResponse = Invoke-RestMethod -Uri "http://$env:STORE_IP/products" -TimeoutSec 10
+        Write-Host "   ✅ Product API is working - Found $($productResponse.Count) products"
+    } catch {
+        Write-Host "   ⚠️ Product API not yet ready: $($_.Exception.Message)"
+    }
+
+    Write-Host ""
+    Write-Host "🎯 Available API Endpoints for APIM Integration:"
+    Write-Host "   GET  http://$env:STORE_IP/products        - Get all products"
+    Write-Host "   GET  http://$env:STORE_IP/products/{id}   - Get specific product"
+    Write-Host "   POST http://$env:STORE_IP/orders          - Create new order"
+    Write-Host "   GET  http://$env:STORE_IP/orders          - Get all orders"
+} else {
+    Write-Host "❌ External IP not yet assigned. Please wait a few more minutes and try again."
+    Write-Host "ℹ️ Check status with: kubectl get service store-front -n aks-store-demo"
+}
 Write-Host ""
 Write-Host "📊 Application Features:"
 Write-Host "   - Multi-service architecture with microservices"
@@ -273,7 +302,7 @@ Write-Host "   - Production-ready with health checks"
 ```
 
 > **TIP**
-> You can view the AKS Store application in your browser by navigating to `http://$env:API_EXTERNAL_IP`. The application provides a complete e-commerce experience with product catalog and order functionality.
+> You can view the AKS Store application in your browser by navigating to `http://$env:STORE_IP` once the external IP is assigned. The application provides a complete e-commerce experience with product catalog and order functionality.
 
 ### Test the Deployed Application
 
