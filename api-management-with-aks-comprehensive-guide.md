@@ -148,14 +148,25 @@ az apic create `
 
 ### Create Sample API Application
 
-Create a simple Node.js API that we'll expose through API Management:
+We'll create a simple Node.js REST API with user management functionality. This API will demonstrate how to expose, secure, and manage APIs using Azure services.
+
+#### Step 1: Create the Application Directory
+
+First, let's create a dedicated folder for our sample API:
 
 ```powershell
-# Create application directory
+# Create a new directory for our sample API
 New-Item -ItemType Directory -Path "sample-api" -Force
 Set-Location "sample-api"
+Write-Host "✅ Created sample-api directory"
+```
 
-# Create package.json
+#### Step 2: Create the Package Configuration
+
+Create a `package.json` file that defines our Node.js application dependencies:
+
+```powershell
+# Create package.json with application metadata and dependencies
 @"
 {
   "name": "sample-api",
@@ -170,67 +181,158 @@ Set-Location "sample-api"
   }
 }
 "@ | Out-File -FilePath "package.json" -Encoding utf8
+Write-Host "✅ Created package.json"
+```
 
-# Create server.js
+#### Step 3: Create the API Server Code
+
+Create the main `server.js` file with our REST API endpoints:
+
+```powershell
+# Create the main server file with REST API endpoints
 @"
 const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Enable JSON parsing for requests
 app.use(express.json());
 
-// Sample data
+// Sample data - in production, this would be a database
 let users = [
   { id: 1, name: 'John Doe', email: 'john@example.com' },
   { id: 2, name: 'Jane Smith', email: 'jane@example.com' }
 ];
 
-// Health check endpoint
+// Health check endpoint - used for monitoring
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
+  res.status(200).json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
+  });
 });
 
-// Get all users
+// REST API Endpoints for User Management
+
+// GET /api/users - Get all users
 app.get('/api/users', (req, res) => {
-  res.json(users);
+  console.log('GET /api/users - Fetching all users');
+  res.json({
+    users: users,
+    count: users.length
+  });
 });
 
-// Get user by ID
+// GET /api/users/:id - Get specific user by ID
 app.get('/api/users/:id', (req, res) => {
-  const user = users.find(u => u.id === parseInt(req.params.id));
+  const userId = parseInt(req.params.id);
+  console.log(\`GET /api/users/\${userId} - Fetching user\`);
+  
+  const user = users.find(u => u.id === userId);
   if (!user) {
-    return res.status(404).json({ error: 'User not found' });
+    return res.status(404).json({ 
+      error: 'User not found',
+      userId: userId 
+    });
   }
   res.json(user);
 });
 
-// Create new user
+// POST /api/users - Create a new user
 app.post('/api/users', (req, res) => {
+  console.log('POST /api/users - Creating new user');
+  
+  // Validate required fields
+  if (!req.body.name || !req.body.email) {
+    return res.status(400).json({
+      error: 'Missing required fields: name and email'
+    });
+  }
+
   const newUser = {
     id: users.length + 1,
     name: req.body.name,
-    email: req.body.email
+    email: req.body.email,
+    created: new Date().toISOString()
   };
+  
   users.push(newUser);
   res.status(201).json(newUser);
 });
 
+// Start the server
 app.listen(port, () => {
-  console.log(`Sample API listening on port ${port}`);
+  console.log(\`🚀 Sample API listening on port \${port}\`);
+  console.log(\`📋 Available endpoints:\`);
+  console.log(\`   GET  /health        - Health check\`);
+  console.log(\`   GET  /api/users     - Get all users\`);
+  console.log(\`   GET  /api/users/:id - Get user by ID\`);
+  console.log(\`   POST /api/users     - Create new user\`);
 });
 "@ | Out-File -FilePath "server.js" -Encoding utf8
+Write-Host "✅ Created server.js with REST API endpoints"
+```
 
-# Create Dockerfile
+#### Step 4: Create the Dockerfile
+
+Create a `Dockerfile` to containerize our application:
+
+```powershell
+# Create Dockerfile for containerizing the application
 @"
+# Use official Node.js runtime as base image
 FROM node:18-alpine
+
+# Set working directory inside container
 WORKDIR /app
+
+# Copy package files first (for better Docker layer caching)
 COPY package*.json ./
-RUN npm install
+
+# Install dependencies
+RUN npm install --production
+
+# Copy application code
 COPY . .
+
+# Expose port 3000
 EXPOSE 3000
+
+# Set non-root user for security
+USER node
+
+# Start the application
 CMD ["npm", "start"]
 "@ | Out-File -FilePath "Dockerfile" -Encoding utf8
+Write-Host "✅ Created Dockerfile"
 ```
+
+#### Step 5: Verify the Application Files
+
+Let's confirm all files were created successfully:
+
+```powershell
+# List all files in the sample-api directory
+Write-Host "📁 Files created in sample-api directory:"
+Get-ChildItem -Name
+Write-Host ""
+Write-Host "✅ Sample API application is ready!"
+Write-Host "📊 API Features:"
+Write-Host "   - Health check endpoint for monitoring"
+Write-Host "   - RESTful user management (GET, POST)"
+Write-Host "   - JSON request/response handling"
+Write-Host "   - Error handling and validation"
+Write-Host "   - Containerized with Docker"
+```
+
+> **INFO**
+> Our sample API includes:
+> - **Health Check**: `/health` endpoint for monitoring and load balancer health checks
+> - **User Management**: CRUD operations for managing users
+> - **REST Standards**: Proper HTTP methods and status codes
+> - **Error Handling**: Validation and meaningful error messages
+> - **Logging**: Console output for debugging and monitoring
 
 ### Build and Push Container Image
 
