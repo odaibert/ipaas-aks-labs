@@ -1,4 +1,4 @@
-{
+﻿{
   "openapi": "3.0.0",
   "info": {
     "title": "AKS Store API",
@@ -26,18 +26,10 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "id": {
-                        "type": "integer"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "price": {
-                        "type": "number"
-                      },
-                      "image": {
-                        "type": "string"
-                      }
+                      "id": { "type": "integer" },
+                      "name": { "type": "string" },
+                      "price": { "type": "number" },
+                      "image": { "type": "string" }
                     }
                   }
                 }
@@ -56,18 +48,12 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": {
-              "type": "integer"
-            }
+            "schema": { "type": "integer" }
           }
         ],
         "responses": {
-          "200": {
-            "description": "Product details"
-          },
-          "404": {
-            "description": "Product not found"
-          }
+          "200": { "description": "Product details" },
+          "404": { "description": "Product not found" }
         }
       }
     },
@@ -76,9 +62,7 @@
         "summary": "Get all orders",
         "description": "Retrieve a list of all orders",
         "responses": {
-          "200": {
-            "description": "List of orders"
-          }
+          "200": { "description": "List of orders" }
         }
       },
       "post": {
@@ -91,24 +75,16 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "productId": {
-                    "type": "integer"
-                  },
-                  "quantity": {
-                    "type": "integer"
-                  },
-                  "customerEmail": {
-                    "type": "string"
-                  }
+                  "productId": { "type": "integer" },
+                  "quantity": { "type": "integer" },
+                  "customerEmail": { "type": "string" }
                 }
               }
             }
           }
         },
         "responses": {
-          "201": {
-            "description": "Order created"
-          }
+          "201": { "description": "Order created" }
         }
       }
     }
