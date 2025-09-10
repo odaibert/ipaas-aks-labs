@@ -332,7 +332,7 @@ You can view the AKS Store application in your browser by navigating to `http://
 
 Our AKS Store Demo application is now running and ready to be integrated with Azure API Management. Let's verify everything is working:
 
-```ash
+```powershell
 # Verify all services are running
 echo "🔍 Final verification of deployed services:"
 kubectl get all -n aks-store-demo
@@ -356,7 +356,7 @@ Now let's expose our AKS Store APIs through Azure API Management.
 This step will automatically generate an OpenAPI specification file (`aks-store-api-spec.json`) that contains your environment-specific IP addresses. This file is not tracked in git to ensure it always reflects your current deployment.
 :::
 
-```ash
+```powershell
 # Ensure STORE_IP is set
 if ([string]::IsNullOrEmpty($env:STORE_IP)) {
     echo "⚠️ STORE_IP not set. Getting external IP..."
@@ -518,7 +518,7 @@ if ($LASTEXITCODE -eq 0) {
 
 Add rate limiting and other policies to secure the API:
 
-```ash
+```powershell
 # Create policy XML for rate limiting and CORS
 @"
 <policies>
@@ -570,7 +570,7 @@ echo "✅ API policies applied to AKS Store API"
 
 Test the API through Azure API Management:
 
-```ash
+```powershell
 # Get APIM gateway URL
 $APIM_GATEWAY = az apim show --name "apim-$env:RAND" --resource-group $env:RG_NAME --query "gatewayUrl" --output tsv
 
@@ -609,7 +609,7 @@ echo "   POST $APIM_GATEWAY/store/orders       - Create new order"
 
 Register the API in Azure API Center for governance and discovery:
 
-```ash
+```powershell
 # Create workspace in API Center
 az apic workspace create `
   --resource-group $env:RG_NAME `
@@ -665,7 +665,7 @@ az apic api definition import-specification `
 
 Create comprehensive documentation for the API:
 
-```ash
+```powershell
 # Add environment information
 az apic environment create `
   --resource-group $env:RG_NAME `
@@ -696,7 +696,7 @@ az apic api deployment create `
 
 Configure monitoring and analytics for your APIs:
 
-```ash
+```powershell
 # Enable Application Insights for APIM (optional)
 $APP_INSIGHTS_NAME = "apim-insights-$env:RAND"
 
@@ -721,7 +721,7 @@ echo "Application Insights configured with key: $INSTRUMENTATION_KEY"
 
 Check API usage and performance:
 
-```ash
+```powershell
 # Generate some test traffic for the AKS Store API
 echo "🚦 Generating test traffic for analytics..."
 for ($i = 1; $i -le 10; $i++) {
@@ -742,7 +742,7 @@ echo "✅ Test traffic generation complete. Check Azure Portal for analytics."
 
 Create a new version of the AKS Store API:
 
-```ash
+```powershell
 # Create API version set
 az apim api versionset create `
   --resource-group $env:RG_NAME `
@@ -783,7 +783,7 @@ echo "✅ API version 2.0 created"
 
 Create a revision for testing new features:
 
-```ash
+```powershell
 # Create a revision of the current API
 $REVISION_ID = "2"
 az apim api revision create `
@@ -811,7 +811,7 @@ echo "📋 API revisions listed above"
 
 Verify that all components are working correctly:
 
-```ash
+```powershell
 echo "=== System Health Check ==="
 
 # Check AKS cluster status
@@ -855,7 +855,7 @@ echo "=== ✅ Health Check Complete ==="
 
 ### Common Issues and Solutions
 
-```ash
+```powershell
 echo "=== 🔧 Troubleshooting Guide ==="
 echo ""
 echo "📝 Common issues and solutions:"
@@ -887,7 +887,7 @@ echo "   • Check resource quotas: kubectl describe nodes"
 
 Access your deployed resources through the Azure Portal:
 
-```ash
+```powershell
 echo "=== 🌐 Azure Portal Access ==="
 echo ""
 echo "📊 Resource Information:"
@@ -955,7 +955,7 @@ This will permanently delete all resources created in this workshop. Make sure y
 
 To clean up all resources created in this workshop:
 
-```ash
+```powershell
 echo "Starting cleanup process..."
 
 # Delete the resource group and all its contents
@@ -975,7 +975,7 @@ echo "https://portal.azure.com/#blade/HubsExtension/BrowseResourceGroups"
 
 To verify cleanup completion:
 
-```ash
+```powershell
 # Check if resource group still exists
 $RG_EXISTS = az group exists --name $env:RG_NAME
 if ($RG_EXISTS -eq "true") {
